@@ -61,12 +61,21 @@ cp .env.example .env
 #### 3. 서비스 시작
 
 ```bash
+# Redis 시작 (Docker 사용)
+docker run -d -p 6379:6379 --name redis-server redis:latest
+
 # PostgreSQL 시작 (Docker 사용)
 docker-compose -f docker-compose.postgres.yml up -d
 
-# 또는 로컬 설치
-brew install postgresql redis  # macOS
-brew services start postgresql redis
+# 또는 로컬 설치 (macOS)
+brew install postgresql redis
+brew services start postgresql
+brew services start redis
+
+# 또는 로컬 설치 (Ubuntu/Debian)
+sudo apt-get install postgresql redis-server
+sudo systemctl start postgresql
+sudo systemctl start redis-server
 
 # 데이터베이스 초기화
 python scripts/init_db.py
