@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Streaming Platform</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --background: #0f0f23;
+            --surface: #1a1a2e;
+            --surface-light: #25274d;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --sidebar-width: 280px;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .app-container {
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        /* 사이드바 */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .app-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .new-chat-button {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .new-chat-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        
+        .chat-item {
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            background: var(--surface-light);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chat-item:hover {
+            background: var(--border);
+            border-color: var(--primary);
+        }
+        
+        .chat-item.active {
+            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .chat-info {
+            flex: 1;
+            overflow: hidden;
+            margin-right: 0.5rem;
+        }
+        
+        .chat-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .chat-meta {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+        
+        .delete-chat-button {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        
+        .chat-item:hover .delete-chat-button {
+            opacity: 1;
+        }
+        
+        .delete-chat-button:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+        
+        .chat-item.active .delete-chat-button {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .chat-item.active .delete-chat-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+        
+        .delete-all-button {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: transparent;
+            color: var(--error);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .delete-all-button:hover {
+            background: var(--error);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        /* 메인 콘텐츠 */
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--surface);
+        }
+        
+        .chat-header {
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        
+        .chat-header-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        
+        .chat-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .messages-container {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scroll-behavior: smooth;
+            min-height: 0;
+        }
+        
+        .message {
+            max-width: 70%;
+            padding: 1rem 1.5rem;
+            border-radius: 18px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .user-message {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            margin-left: auto;
+        }
+        
+        .assistant-message {
+            align-self: flex-start;
+            background: var(--surface-light);
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .assistant-message.streaming::after {
+            content: '▋';
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .input-section {
+            padding: 1.5rem;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        
+        .input-form {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: var(--surface-light);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--surface-light);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        input[type="text"]::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .send-button {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+        }
+        
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .progress-bar {
+            margin-top: 1rem;
+            height: 4px;
+            background: var(--surface-light);
+            border-radius: 2px;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .progress-bar.active {
+            opacity: 1;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 100px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3));
+            animation: shimmer 1.5s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100px); }
+            100% { transform: translateX(100px); }
+        }
+        
+        /* 디버그 패널 */
+        .debug-panel {
+            width: 400px;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--border);
+        }
+        
+        .debug-header {
+            padding: 1rem 1.5rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .debug-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        .clear-button {
+            padding: 0.5rem 1rem;
+            background: var(--surface-light);
+            border: none;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .clear-button:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+        
+        .debug-log {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 0.875rem;
+            min-height: 0;
+            max-height: 100%;
+        }
+        
+        .log-entry {
+            margin-bottom: 0.5rem;
+            padding: 0.75rem;
+            background: var(--surface);
+            border-radius: 8px;
+            border-left: 3px solid var(--border);
+            transition: all 0.2s ease;
+        }
+        
+        .log-entry:hover {
+            background: var(--surface-light);
+        }
+        
+        .log-entry.connected { border-color: var(--success); }
+        .log-entry.start { border-color: var(--info); }
+        .log-entry.token { border-color: var(--primary); }
+        .log-entry.progress { border-color: var(--warning); }
+        .log-entry.complete { border-color: var(--success); }
+        .log-entry.error { 
+            border-color: var(--error); 
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .log-time {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            margin-right: 0.5rem;
+        }
+        
+        .log-type {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: var(--surface-light);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-right: 0.5rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        
+        /* 빈 상태 */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .empty-state-text {
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .empty-state-subtext {
+            font-size: 0.875rem;
+            opacity: 0.7;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--surface);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--text-secondary);
+            border-radius: 5px;
+            border: 2px solid var(--surface);
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+        
+        /* Firefox scrollbar */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--text-secondary) var(--surface);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 사이드바 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="app-title">Redis Pub/Sub + Celery</h1>
+                <button class="new-chat-button" onclick="createNewChat()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    새 채팅
+                </button>
+            </div>
+            <div class="chat-list" id="chatList"></div>
+            <div class="sidebar-footer">
+                <button class="delete-all-button" onclick="deleteAllChats()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    모든 채팅 삭제
+                </button>
+            </div>
+        </div>
+        
+        <!-- 메인 콘텐츠 -->
+        <div class="main-container">
+            <div class="chat-container">
+                <div id="emptyState" class="empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <div class="empty-state-text">채팅을 선택하거나 새로 시작하세요</div>
+                    <div class="empty-state-subtext">왼쪽의 '새 채팅' 버튼을 클릭하여 시작할 수 있습니다</div>
+                </div>
+                
+                <div id="chatContent" style="display: none; height: 100%; display: flex; flex-direction: column;">
+                    <div class="chat-header">
+                        <h2 class="chat-header-title" id="chatTitle">새 채팅</h2>
+                        <div class="chat-status">
+                            <div class="status-indicator"></div>
+                            <span id="connectionStatus">Connected</span>
+                        </div>
+                    </div>
+                    
+                    <div class="messages-container" id="messages"></div>
+                    
+                    <div class="input-section">
+                        <form class="input-form" onsubmit="sendMessage(event)">
+                            <div class="input-wrapper">
+                                <input type="text" id="messageInput" placeholder="메시지를 입력하세요..." required>
+                            </div>
+                            <button type="submit" class="send-button" id="sendButton">
+                                <span>전송</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </form>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 디버그 패널 -->
+            <div class="debug-panel">
+                <div class="debug-header">
+                    <h3 class="debug-title">System Logs</h3>
+                    <button class="clear-button" onclick="clearLog()">Clear</button>
+                </div>
+                <div class="debug-log" id="debugLog"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let eventSources = {}; // 채팅별 SSE 연결 관리
+        let currentChatId = null;
+        let chatStates = {}; // 채팅별 상태 관리
+        let chatLogs = {}; // 채팅별 로그 저장
+        
+        // 채팅 목록 로드
+        async function loadChats() {
+            try {
+                const response = await fetch('/api/chats');
+                const data = await response.json();
+                
+                const chatList = document.getElementById('chatList');
+                chatList.innerHTML = '';
+                
+                data.chats.forEach(chat => {
+                    const chatItem = document.createElement('div');
+                    chatItem.className = 'chat-item';
+                    if (chat.chat_id === currentChatId) {
+                        chatItem.classList.add('active');
+                    }
+                    
+                    chatItem.innerHTML = `
+                        <div class="chat-info" onclick="loadChat('${chat.chat_id}')">
+                            <div class="chat-title">${chat.title}</div>
+                            <div class="chat-meta">${chat.message_count}개 메시지</div>
+                        </div>
+                        <button class="delete-chat-button" onclick="deleteChat(event, '${chat.chat_id}')" title="채팅 삭제">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                        </button>
+                    `;
+                    
+                    chatList.appendChild(chatItem);
+                });
+            } catch (error) {
+                addLog('error', { error: `채팅 목록 로드 실패: ${error.message}` });
+            }
+        }
+        
+        // 새 채팅 생성
+        async function createNewChat() {
+            try {
+                const response = await fetch('/api/chats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                currentChatId = data.chat_id;
+                
+                // UI 업데이트
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('chatContent').style.display = 'flex';
+                document.getElementById('chatTitle').textContent = data.title;
+                document.getElementById('messages').innerHTML = '';
+                
+                // 채팅 상태 초기화
+                chatStates[data.chat_id] = {
+                    isProcessing: false,
+                    taskId: null
+                };
+                
+                // 로그 초기화
+                chatLogs[data.chat_id] = [];
+                displayChatLogs(data.chat_id);
+                
+                // UI 상태 업데이트 (버튼 활성화 등)
+                updateUIForCurrentChat();
+                
+                // 채팅 목록 새로고침
+                await loadChats();
+                
+                addLog('info', { message: `새 채팅 생성: ${data.chat_id}` }, data.chat_id);
+            } catch (error) {
+                addLog('error', { error: `채팅 생성 실패: ${error.message}` });
+            }
+        }
+        
+        // 채팅 로드
+        async function loadChat(chatId) {
+            try {
+                const response = await fetch(`/api/chats/${chatId}`);
+                const chat = await response.json();
+                
+                currentChatId = chatId;
+                
+                // UI 업데이트
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('chatContent').style.display = 'flex';
+                document.getElementById('chatTitle').textContent = chat.title;
+                
+                // 메시지 표시
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.innerHTML = '';
+                
+                chat.messages.forEach(message => {
+                    if (message.type === 'user') {
+                        addMessage(message.content, true, false);
+                    } else if (message.type === 'assistant') {
+                        const msgDiv = addMessage(message.content || '', false, false);
+                        if (message.status === 'streaming' || message.status === 'processing') {
+                            msgDiv.classList.add('streaming');
+                        }
+                    }
+                });
+                
+                // 채팅 상태 초기화 또는 복원
+                if (!chatStates[chatId]) {
+                    chatStates[chatId] = {
+                        isProcessing: false,
+                        taskId: null
+                    };
+                }
+                
+                // 활성 작업 확인
+                const activeResponse = await fetch(`/api/chats/${chatId}/active-task`);
+                const activeData = await activeResponse.json();
+                
+                if (activeData.task_id) {
+                    addLog('info', { message: `활성 작업 발견: ${activeData.task_id}` });
+                    chatStates[chatId].isProcessing = true;
+                    chatStates[chatId].taskId = activeData.task_id;
+                    connectSSE(activeData.task_id, true);
+                }
+                
+                // 현재 채팅의 상태에 따라 UI 업데이트
+                updateUIForCurrentChat();
+                
+                // 현재 채팅의 로그 표시
+                displayChatLogs(chatId);
+                
+                // 채팅 목록 업데이트
+                await loadChats();
+                
+            } catch (error) {
+                addLog('error', { error: `채팅 로드 실패: ${error.message}` });
+            }
+        }
+        
+        function addMessage(content, isUser = false, shouldScroll = true) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+            messageDiv.textContent = content;
+            messagesDiv.appendChild(messageDiv);
+            
+            if (shouldScroll) {
+                // 메시지 컨테이너 내부에서만 스크롤
+                requestAnimationFrame(() => {
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                });
+            }
+            
+            return messageDiv;
+        }
+        
+        function addLog(type, data, chatId = null) {
+            // 채팅 ID가 지정되지 않았으면 현재 채팅 사용
+            const targetChatId = chatId || currentChatId;
+            
+            // 채팅별 로그 저장
+            if (targetChatId) {
+                if (!chatLogs[targetChatId]) {
+                    chatLogs[targetChatId] = [];
+                }
+                
+                const timestamp = new Date().toLocaleTimeString('ko-KR', { 
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                chatLogs[targetChatId].push({
+                    timestamp,
+                    type,
+                    data
+                });
+                
+                // 최대 100개 로그만 유지
+                if (chatLogs[targetChatId].length > 100) {
+                    chatLogs[targetChatId].shift();
+                }
+            }
+            
+            // 현재 채팅의 로그만 화면에 표시
+            if (targetChatId === currentChatId) {
+                displayLogEntry(type, data);
+            }
+        }
+        
+        function displayLogEntry(type, data) {
+            const logDiv = document.getElementById('debugLog');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString('ko-KR', { 
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            let logContent = `<span class="log-time">${timestamp}</span>`;
+            logContent += `<span class="log-type ${type}">${type}</span>`;
+            
+            if (type === 'token') {
+                logContent += `Token: "${data.content || ''}"`;
+            } else if (type === 'error') {
+                logContent += `<span style="color: var(--error)">${data.error || JSON.stringify(data)}</span>`;
+            } else {
+                logContent += `<span>${JSON.stringify(data)}</span>`;
+            }
+            
+            logEntry.innerHTML = logContent;
+            logDiv.appendChild(logEntry);
+            
+            // 디버그 로그 컨테이너 내부에서만 스크롤
+            requestAnimationFrame(() => {
+                logDiv.scrollTop = logDiv.scrollHeight;
+            });
+        }
+        
+        function displayChatLogs(chatId) {
+            const logDiv = document.getElementById('debugLog');
+            logDiv.innerHTML = '';
+            
+            if (chatLogs[chatId]) {
+                chatLogs[chatId].forEach(log => {
+                    const logEntry = document.createElement('div');
+                    logEntry.className = `log-entry ${log.type}`;
+                    
+                    let logContent = `<span class="log-time">${log.timestamp}</span>`;
+                    logContent += `<span class="log-type ${log.type}">${log.type}</span>`;
+                    
+                    if (log.type === 'token') {
+                        logContent += `Token: "${log.data.content || ''}"`;
+                    } else if (log.type === 'error') {
+                        logContent += `<span style="color: var(--error)">${log.data.error || JSON.stringify(log.data)}</span>`;
+                    } else {
+                        logContent += `<span>${JSON.stringify(log.data)}</span>`;
+                    }
+                    
+                    logEntry.innerHTML = logContent;
+                    logDiv.appendChild(logEntry);
+                });
+                
+                logDiv.scrollTop = logDiv.scrollHeight;
+            }
+        }
+        
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            const indicatorEl = document.querySelector('.status-indicator');
+            
+            if (connected) {
+                statusEl.textContent = 'Connected';
+                indicatorEl.style.background = 'var(--success)';
+            } else {
+                statusEl.textContent = 'Disconnected';
+                indicatorEl.style.background = 'var(--error)';
+            }
+        }
+        
+        function updateProgress(percent) {
+            const progressBar = document.querySelector('.progress-bar');
+            const progressFill = document.getElementById('progressBar');
+            
+            progressFill.style.width = `${percent}%`;
+            
+            if (percent > 0 && percent < 100) {
+                progressBar.classList.add('active');
+            } else if (percent === 0 || percent === 100) {
+                setTimeout(() => {
+                    progressBar.classList.remove('active');
+                }, 500);
+            }
+        }
+        
+        function updateUIForCurrentChat() {
+            const sendButton = document.getElementById('sendButton');
+            const messageInput = document.getElementById('messageInput');
+            
+            if (!currentChatId || !chatStates[currentChatId]) {
+                // 채팅이 없거나 상태가 없으면 버튼 활성화
+                sendButton.disabled = false;
+                updateProgress(0);
+                return;
+            }
+            
+            const state = chatStates[currentChatId];
+            sendButton.disabled = state.isProcessing;
+            
+            if (!state.isProcessing) {
+                updateProgress(0);
+                messageInput.focus();
+            }
+        }
+        
+        async function sendMessage(event) {
+            event.preventDefault();
+            
+            if (!currentChatId) {
+                alert('먼저 채팅을 선택하거나 새로 시작하세요.');
+                return;
+            }
+            
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            // UI 업데이트
+            addMessage(message, true);
+            input.value = '';
+            
+            // 현재 채팅의 상태 업데이트
+            chatStates[currentChatId].isProcessing = true;
+            document.getElementById('sendButton').disabled = true;
+            updateProgress(0);
+            
+            try {
+                // 메시지 전송
+                const response = await fetch(`/api/chats/${currentChatId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                
+                const data = await response.json();
+                chatStates[currentChatId].taskId = data.task_id;
+                
+                addLog('start', { task_id: data.task_id, status: data.status }, currentChatId);
+                
+                // SSE 연결
+                connectSSE(data.task_id);
+                
+                // 채팅 제목 업데이트
+                await loadChats();
+                
+            } catch (error) {
+                addLog('error', { error: error.message }, currentChatId);
+                chatStates[currentChatId].isProcessing = false;
+                document.getElementById('sendButton').disabled = false;
+                updateConnectionStatus(false);
+            }
+        }
+        
+        function connectSSE(taskId, isReconnect = false) {
+            // 이전 연결이 있으면 종료
+            if (eventSources[taskId]) {
+                eventSources[taskId].close();
+            }
+            
+            let assistantDiv;
+            let fullResponse = '';
+            
+            if (!isReconnect) {
+                assistantDiv = addMessage('', false);
+                assistantDiv.classList.add('streaming');
+            } else {
+                // 재연결의 경우 마지막 assistant 메시지 찾기
+                const messages = document.querySelectorAll('.assistant-message');
+                if (messages.length > 0) {
+                    assistantDiv = messages[messages.length - 1];
+                    assistantDiv.classList.add('streaming');
+                    fullResponse = assistantDiv.textContent;
+                } else {
+                    assistantDiv = addMessage('', false);
+                    assistantDiv.classList.add('streaming');
+                }
+            }
+            
+            const eventSource = new EventSource(`/api/stream/${taskId}`);
+            eventSources[taskId] = eventSource;
+            
+            // 현재 채팅 ID 찾기
+            let chatId = null;
+            for (const [cId, state] of Object.entries(chatStates)) {
+                if (state.taskId === taskId) {
+                    chatId = cId;
+                    break;
+                }
+            }
+            
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                // 해당 채팅에 로그 추가
+                if (chatId) {
+                    addLog(data.type, data, chatId);
+                }
+                
+                switch (data.type) {
+                    case 'connected':
+                        updateConnectionStatus(true);
+                        break;
+                        
+                    case 'start':
+                        updateProgress(10);
+                        break;
+                        
+                    case 'progress':
+                        updateProgress(data.progress || 0);
+                        break;
+                        
+                    case 'token':
+                        fullResponse += data.content;
+                        assistantDiv.textContent = fullResponse;
+                        // 스트리밍 중에도 스크롤 유지
+                        const messagesDiv = document.getElementById('messages');
+                        if (messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < 100) {
+                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                        }
+                        break;
+                        
+                    case 'complete':
+                        assistantDiv.classList.remove('streaming');
+                        updateProgress(100);
+                        
+                        // 해당 채팅의 상태 업데이트
+                        if (chatId && chatStates[chatId]) {
+                            chatStates[chatId].isProcessing = false;
+                            chatStates[chatId].taskId = null;
+                        }
+                        
+                        // 현재 채팅이면 UI 업데이트
+                        if (chatId === currentChatId) {
+                            document.getElementById('sendButton').disabled = false;
+                            document.getElementById('messageInput').focus();
+                            setTimeout(() => updateProgress(0), 300);
+                        }
+                        
+                        eventSource.close();
+                        delete eventSources[taskId];
+                        break;
+                        
+                    case 'error':
+                        assistantDiv.classList.remove('streaming');
+                        assistantDiv.textContent = '오류가 발생했습니다: ' + data.error;
+                        
+                        // 해당 채팅의 상태 업데이트
+                        if (chatId && chatStates[chatId]) {
+                            chatStates[chatId].isProcessing = false;
+                            chatStates[chatId].taskId = null;
+                        }
+                        
+                        // 현재 채팅이면 UI 업데이트
+                        if (chatId === currentChatId) {
+                            document.getElementById('sendButton').disabled = false;
+                            document.getElementById('messageInput').focus();
+                            updateProgress(0);
+                        }
+                        
+                        eventSource.close();
+                        delete eventSources[taskId];
+                        break;
+                }
+            };
+            
+            eventSource.onerror = (error) => {
+                if (chatId) {
+                    addLog('error', { error: 'SSE connection error' }, chatId);
+                }
+                updateConnectionStatus(false);
+                assistantDiv.classList.remove('streaming');
+                
+                // 해당 채팅의 상태 업데이트
+                if (chatId && chatStates[chatId]) {
+                    chatStates[chatId].isProcessing = false;
+                    chatStates[chatId].taskId = null;
+                }
+                
+                // 현재 채팅이면 UI 업데이트
+                if (chatId === currentChatId) {
+                    document.getElementById('sendButton').disabled = false;
+                }
+                
+                eventSource.close();
+                delete eventSources[taskId];
+            };
+        }
+        
+        function clearLog() {
+            if (currentChatId && chatLogs[currentChatId]) {
+                chatLogs[currentChatId] = [];
+                document.getElementById('debugLog').innerHTML = '';
+            }
+        }
+        
+        async function deleteChat(event, chatId) {
+            event.stopPropagation(); // 채팅 클릭 이벤트 방지
+            
+            // 삭제 확인
+            if (!confirm('이 채팅을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                return;
+            }
+            
+            try {
+                // 진행 중인 작업이 있으면 중단
+                if (eventSources[chatStates[chatId]?.taskId]) {
+                    eventSources[chatStates[chatId].taskId].close();
+                    delete eventSources[chatStates[chatId].taskId];
+                }
+                
+                // 채팅 삭제 API 호출
+                const response = await fetch(`/api/chats/${chatId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('채팅 삭제 실패');
+                }
+                
+                // 상태에서 제거
+                delete chatStates[chatId];
+                delete chatLogs[chatId];
+                
+                // 현재 채팅이 삭제된 경우 UI 초기화
+                if (currentChatId === chatId) {
+                    currentChatId = null;
+                    document.getElementById('emptyState').style.display = 'flex';
+                    document.getElementById('chatContent').style.display = 'none';
+                    document.getElementById('debugLog').innerHTML = '';
+                }
+                
+                // 채팅 목록 새로고침
+                await loadChats();
+                
+                addLog('info', { message: `채팅 삭제됨: ${chatId}` });
+            } catch (error) {
+                addLog('error', { error: `채팅 삭제 실패: ${error.message}` });
+            }
+        }
+        
+        async function deleteAllChats() {
+            // 삭제 확인
+            if (!confirm('모든 채팅을 삭제하시겠습니까? 모든 대화 내용이 영구적으로 삭제되며 이 작업은 되돌릴 수 없습니다.')) {
+                return;
+            }
+            
+            try {
+                // 모든 채팅 목록 가져오기
+                const response = await fetch('/api/chats');
+                const data = await response.json();
+                
+                if (data.chats.length === 0) {
+                    alert('삭제할 채팅이 없습니다.');
+                    return;
+                }
+                
+                // 진행 상황 표시
+                const totalChats = data.chats.length;
+                let deletedCount = 0;
+                let failedCount = 0;
+                
+                // 모든 SSE 연결 종료
+                for (const taskId in eventSources) {
+                    eventSources[taskId].close();
+                    delete eventSources[taskId];
+                }
+                
+                // 각 채팅 삭제
+                for (const chat of data.chats) {
+                    try {
+                        const deleteResponse = await fetch(`/api/chats/${chat.chat_id}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (deleteResponse.ok) {
+                            deletedCount++;
+                            delete chatStates[chat.chat_id];
+                            delete chatLogs[chat.chat_id];
+                        } else {
+                            failedCount++;
+                        }
+                    } catch (error) {
+                        failedCount++;
+                    }
+                }
+                
+                // UI 초기화
+                currentChatId = null;
+                document.getElementById('emptyState').style.display = 'flex';
+                document.getElementById('chatContent').style.display = 'none';
+                document.getElementById('debugLog').innerHTML = '';
+                
+                // 채팅 목록 새로고침
+                await loadChats();
+                
+                // 결과 표시
+                let message = `${deletedCount}개의 채팅이 삭제되었습니다.`;
+                if (failedCount > 0) {
+                    message += ` (${failedCount}개 실패)`;
+                }
+                
+                alert(message);
+                addLog('info', { message: `모든 채팅 삭제 완료: ${message}` });
+                
+            } catch (error) {
+                alert('채팅 삭제 중 오류가 발생했습니다.');
+                addLog('error', { error: `모든 채팅 삭제 실패: ${error.message}` });
+            }
+        }
+        
+        // 페이지 로드 시 초기화
+        window.onload = async () => {
+            try {
+                // 헬스 체크
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                // 헬스 체크는 전역 로그로 (채팅 ID 없이)
+                // addLog('health', data);
+                
+                // 채팅 목록 로드
+                await loadChats();
+            } catch (error) {
+                // addLog('error', { error: 'Initialization failed' });
+            }
+        };
+    </script>
+</body>
+</html>

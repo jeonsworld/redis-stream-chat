@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: redis-streaming-postgres
+    environment:
+      POSTGRES_USER: streaming_user
+      POSTGRES_PASSWORD: streaming_pass
+      POSTGRES_DB: streaming_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U streaming_user -d streaming_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - redis-streaming-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-streaming-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - redis-streaming-network
+
+  celery-worker:
+    build: .
+    container_name: redis-streaming-celery
+    command: python scripts/run_worker.py
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://streaming_user:streaming_pass@postgres:5432/streaming_db
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - PYTHONPATH=/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+    networks:
+      - redis-streaming-network
+
+  fastapi:
+    build: .
+    container_name: redis-streaming-fastapi
+    command: python scripts/run_server.py
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://streaming_user:streaming_pass@postgres:5432/streaming_db
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - HOST=0.0.0.0
+      - PORT=5000
+      - PYTHONPATH=/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
+    volumes:
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - ./templates:/app/templates
+      - ./static:/app/static
+    networks:
+      - redis-streaming-network
+
+  # 선택사항: Redis 모니터링
+  redis-monitor:
+    build: .
+    container_name: redis-streaming-monitor
+    command: python scripts/monitor_redis.py
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+    networks:
+      - redis-streaming-network
+    profiles:
+      - monitoring
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  redis-streaming-network:
+    driver: bridge
